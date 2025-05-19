@@ -46,10 +46,10 @@ RUN apt-get update && \
 # 6. Copy requirements file
 COPY requirements.txt .
 
-# 7. Install build dependency 'packaging', then a specific version of flash-attn and other packages from requirements.txt
+# 7. Install build dependencies 'setuptools', 'wheel', 'packaging', then a specific version of flash-attn and other packages from requirements.txt
 # Pinning flash-attn to 2.5.8 for better compatibility with PyTorch 2.1.0.
 # Let pip handle build isolation for flash-attn.
-RUN python3 -m pip install --no-cache-dir packaging && \
+RUN python3 -m pip install --no-cache-dir --upgrade setuptools wheel packaging && \
     python3 -m pip install --no-cache-dir flash-attn==2.5.8 && \
     python3 -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf ~/.cache/pip
