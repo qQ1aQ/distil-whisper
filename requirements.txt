@@ -11,10 +11,14 @@ datasets[audio]
 # Flash Attention 2 (requires compatible GPU and CUDA toolkit >= 11.6)
 flash-attn --no-build-isolation
 
+# For audio processing
+soundfile
+
 # Optimum for BetterTransformer
 optimum
 
 # For serving the model via HTTP (recommended for RunPod)
 fastapi
 uvicorn[standard]
-python-multipart # For file uploads with FastAPI
+# For file uploads with FastAPI
+python-multipart
