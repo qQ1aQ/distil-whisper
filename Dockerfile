@@ -46,11 +46,11 @@ RUN apt-get update && \
 # 6. Copy requirements file
 COPY requirements.txt .
 
-# 7. Install build dependency 'packaging', then flash-attn and other packages from requirements.txt
-# flash-attn needs to be built against the installed PyTorch and CUDA.
+# 7. Install build dependency 'packaging', then a specific version of flash-attn and other packages from requirements.txt
+# Pinning flash-attn to 2.5.8 for better compatibility with PyTorch 2.1.0.
 # Let pip handle build isolation for flash-attn.
 RUN python3 -m pip install --no-cache-dir packaging && \
-    python3 -m pip install --no-cache-dir flash-attn && \
+    python3 -m pip install --no-cache-dir flash-attn==2.5.8 && \
     python3 -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf ~/.cache/pip
 
