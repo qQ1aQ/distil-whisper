@@ -8,13 +8,14 @@ ENV PYTHON_VERSION=3.10
 # Set the working directory
 WORKDIR /app
 
-# 2. Install Python, pip, and essential build tools
+# 2. Install Python, pip, git, and essential build tools
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-dev \
     python${PYTHON_VERSION}-distutils \
     python3-pip \
+    git \
     build-essential \
     software-properties-common \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
