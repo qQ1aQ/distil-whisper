@@ -1,29 +1,59 @@
-# 1. Use a PyTorch base image with CUDA and Python 3.10
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel
+# 1. Use a smaller NVIDIA CUDA base image (CUDA 11.8, Ubuntu 22.04)
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 
-# Set the working directory in the container
+# Set environment variables to prevent interactive prompts during apt-get
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHON_VERSION=3.10
+
+# Set the working directory
 WORKDIR /app
 
-# Install necessary system dependencies for audio processing
+# 2. Install Python, pip, and essential build tools
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-dev \
+    python${PYTHON_VERSION}-distutils \
+    python3-pip \
+    build-essential \
+    software-properties-common \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Make python${PYTHON_VERSION} the default python3 and python
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1
+
+# 3. Upgrade pip
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    rm -rf ~/.cache/pip
+
+# 4. Install PyTorch 2.1.0 for CUDA 11.8
+# This version combination is important for flash-attn and model compatibility.
+RUN python3 -m pip install --no-cache-dir \
+    torch==2.1.0 \
+    torchvision==0.16.0 \
+    torchaudio==2.1.0 \
+    --index-url https://download.pytorch.org/whl/cu118 && \
+    rm -rf ~/.cache/pip
+
+# 5. Install system dependencies for audio processing
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Copy the requirements file into the /app/ directory
+# 6. Copy requirements file
 COPY requirements.txt .
 
-# Upgrade pip, then install flash-attn (which requires nvcc and CUDA_HOME from the base image),
-# then install other packages from requirements.txt.
-# The base image already has PyTorch 2.1.0.
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir flash-attn --no-build-isolation && \
-    pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip
+# 7. Install flash-attn and other packages from requirements.txt
+# flash-attn needs to be built against the installed PyTorch and CUDA
+RUN python3 -m pip install --no-cache-dir flash-attn --no-build-isolation && \
+    python3 -m pip install --no-cache-dir -r requirements.txt && \
+    rm -rf ~/.cache/pip
 
-# Copy the application script into the /app/ directory
+# 8. Copy application script
 COPY app.py .
 
 # Command to run when the container starts
-CMD ["python", "app.py"]
+CMD ["python3", "app.py"]
