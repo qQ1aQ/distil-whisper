@@ -1,0 +1,29 @@
+# Hugging Face and model-specific libraries
+transformers>=4.35.0
+accelerate
+datasets[audio]
+optimum         # For BetterTransformer / SDPA support
+
+# Flash Attention 2
+# IMPORTANT: The --no-build-isolation flag will be handled in the Dockerfile's pip install command for flash-attn.
+# Listing it here is for dependency declaration.
+flash-attn
+
+# For audio processing
+soundfile       # Explicitly listed, though often a dependency of datasets[audio]
+# librosa       # Often a dependency of datasets[audio], uncomment if you have specific direct use
+
+# Whisper-specific tokenizer dependency
+sentencepiece
+
+# For serving the model via HTTP (recommended for RunPod)
+fastapi
+uvicorn[standard]
+python-multipart # For file uploads with FastAPI
+
+# Note on PyTorch (torch):
+# The base Docker image 'pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime' already includes PyTorch.
+# Explicitly installing torch via 'pip install torch --index-url ...' here is generally not needed
+# and can sometimes lead to conflicts or redundant installations.
+# It's recommended to rely on the PyTorch version provided by the base image.
+# If you had 'torch --index-url ...' here, it has been removed.
