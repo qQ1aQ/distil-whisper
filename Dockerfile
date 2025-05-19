@@ -1,41 +1,44 @@
-# Start from a PyTorch base image with CUDA support
-# Check RunPod documentation for recommended CUDA versions for PyTorch or choose a recent one.
-# PyTorch 2.1.0 with CUDA 12.1 is a good recent choice.
+# Use the specified PyTorch base image with CUDA 12.1 support
 FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies
-# ffmpeg is crucial for Whisper to handle various audio formats.
-# libsndfile1 is often needed for audio processing.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install necessary system dependencies
+# - ffmpeg and libsndfile1 are for audio processing
+# - git is useful for some pip package installations that might clone repos, or for versioning within the container if needed
+RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsndfile1 \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
+# Copy the requirements file first to leverage Docker cache
 COPY requirements.txt .
 
 # Install Python dependencies
-# Using --no-cache-dir to reduce image size
-# Ensure your pip is up-to-date within the build
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# --no-cache-dir reduces image size
+# --upgrade pip ensures the latest pip is used
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy your application code and any other necessary files from your repo
-# For now, just app.py. If app.py depends on other local modules, copy them too.
+# Copy the rest of the application code
+# This assumes your app.py and any other necessary code (like a 'models' directory if local)
+# are in the same directory as the Dockerfile.
 COPY app.py .
-# If your app.py needs to use code from the 'training' directory or other parts
-# of the distil-whisper repo, you would add lines like:
-# COPY training /app/training
-# COPY other_needed_dirs /app/other_needed_dirs
-# For now, the app.py we'll create will be self-contained for inference.
+# If you have other directories or files needed by app.py, copy them here. For example:
+# COPY ./your_model_directory /app/your_model_directory
 
-# Expose the port your FastAPI application will run on
+# Expose the port FastAPI will run on (if you're using FastAPI in app.py for serving)
+# Default for uvicorn is 8000. Adjust if your app.py uses a different port.
 EXPOSE 8000
 
-# Command to run your application
-# This assumes your app.py will be updated to run a Uvicorn server with FastAPI
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run when the container starts
+# This will execute your app.py script using python.
+# If app.py uses uvicorn to serve a FastAPI app, the command would be different, e.g.:
+# CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]_
+# For now, keeping the original assumption for app.py:
+CMD ["python", "app.py"]
