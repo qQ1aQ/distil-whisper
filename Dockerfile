@@ -47,9 +47,8 @@ RUN apt-get update && \
 # 6. Copy requirements file
 COPY requirements.txt .
 
-# 7. Install build dependencies 'setuptools', 'wheel', 'packaging', then a specific version of flash-attn and other packages from requirements.txt
-# Pinning flash-attn to 2.5.8 for better compatibility with PyTorch 2.1.0.
-# Let pip handle build isolation for flash-attn.
+# 7. Install build dependencies for flash-attn, then install all Python packages from requirements.txt
+# `flash-attn==2.5.8` is also in requirements.txt, this explicit install ensures it's handled correctly.
 RUN python3 -m pip install --no-cache-dir --upgrade setuptools wheel packaging && \
     python3 -m pip install --no-cache-dir flash-attn==2.5.8 && \
     python3 -m pip install --no-cache-dir -r requirements.txt && \
@@ -58,5 +57,10 @@ RUN python3 -m pip install --no-cache-dir --upgrade setuptools wheel packaging &
 # 8. Copy application script
 COPY app.py .
 
-# Command to run when the container starts
-CMD ["python3", "app.py"]
+# 9. Expose the port uvicorn will run on
+EXPOSE 8000
+
+# 10. Command to run when the container starts
+# --workers 1 is recommended for GPU-based PyTorch models to avoid issues
+# with multiprocessing unless your model/pipeline is specifically designed for it.
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
