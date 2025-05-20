@@ -2,28 +2,28 @@
 transformers>=4.35.0
 accelerate
 datasets[audio]
-optimum         # For BetterTransformer / SDPA support
+optimum         
+# For BetterTransformer / SDPA support
 
-# Flash Attention 2
-# IMPORTANT: The --no-build-isolation flag will be handled in the Dockerfile's pip install command for flash-attn.
-# Listing it here is for dependency declaration.
-flash-attn
+# Core numerical and attention libraries
+numpy<2.0       
+# CRITICAL: Pin to avoid NumPy 2.x issues with PyTorch 2.1 extensions
+flash-attn==2.5.8 
+# CRITICAL: Pinned version for PyTorch 2.1.0 and CUDA 11.8 compatibility
 
 # For audio processing
-soundfile       # Explicitly listed, though often a dependency of datasets[audio]
-# librosa       # Often a dependency of datasets[audio], uncomment if you have specific direct use
+soundfile       
+# Explicitly listed, though often a dependency of datasets[audio]
 
 # Whisper-specific tokenizer dependency
 sentencepiece
 
-# For serving the model via HTTP (recommended for RunPod)
-fastapi
-uvicorn[standard]
-python-multipart # For file uploads with FastAPI
-
-# Note on PyTorch (torch):
-# The base Docker image 'pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime' already includes PyTorch.
-# Explicitly installing torch via 'pip install torch --index-url ...' here is generally not needed
-# and can sometimes lead to conflicts or redundant installations.
-# It's recommended to rely on the PyTorch version provided by the base image.
-# If you had 'torch --index-url ...' here, it has been removed.
+# Note on PyTorch (torch, torchvision, torchaudio):
+# These are installed separately in the Dockerfile using --index-url for specific CUDA compatibility.
+# Do not list them here to avoid conflicts.
+# Note on FastAPI, Uvicorn (for API serving):
+# These are not included here as the current app.py is a script.
+# Add them back when/if you convert app.py to an HTTP service:
+# fastapi
+# uvicorn[standard]
+# python-multipart
