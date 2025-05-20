@@ -2,28 +2,23 @@
 transformers>=4.35.0
 accelerate
 datasets[audio]
-optimum         
-# For BetterTransformer / SDPA support
+optimum
 
 # Core numerical and attention libraries
-numpy<2.0       
-# CRITICAL: Pin to avoid NumPy 2.x issues with PyTorch 2.1 extensions
-flash-attn==2.5.8 
-# CRITICAL: Pinned version for PyTorch 2.1.0 and CUDA 11.8 compatibility
+numpy<2.0
+flash-attn==2.5.8
 
 # For audio processing
-soundfile       
-# Explicitly listed, though often a dependency of datasets[audio]
+soundfile
+# numpy is already listed above
 
 # Whisper-specific tokenizer dependency
 sentencepiece
 
+# For serving the model via HTTP (FastAPI)
+fastapi
+uvicorn[standard]
+python-multipart
+
 # Note on PyTorch (torch, torchvision, torchaudio):
-# These are installed separately in the Dockerfile using --index-url for specific CUDA compatibility.
-# Do not list them here to avoid conflicts.
-# Note on FastAPI, Uvicorn (for API serving):
-# These are not included here as the current app.py is a script.
-# Add them back when/if you convert app.py to an HTTP service:
-# fastapi
-# uvicorn[standard]
-# python-multipart
+# These are installed separately in the Dockerfile.
