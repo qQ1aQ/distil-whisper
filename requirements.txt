@@ -1,27 +1,26 @@
 # requirements.txt
 
-# Hugging Face and model-specific libraries
-transformers>=4.35.0
-accelerate
-datasets[audio]
-optimum
+   # Hugging Face and model-specific libraries
+   transformers>=4.35.0
+   accelerate
+   datasets[audio]
+   optimum
 
-# Core numerical and attention libraries
-numpy<2.0
-flash-attn==2.5.8
+   # Core numerical and attention libraries
+   numpy<2.0
+   flash-attn==2.5.8
 
-# For audio processing
-soundfile
-# numpy is already listed above
+   # For audio processing
+   soundfile
+   # numpy is already listed above
 
-# Whisper-specific tokenizer dependency
-sentencepiece
+   # Whisper-specific tokenizer dependency
+   sentencepiece
 
-# For serving the model via HTTP (FastAPI)
-fastapi
-uvicorn[standard]
-python-multipart
+   # For serving the model via HTTP (FastAPI)
+   fastapi
+   uvicorn[standard]
+   python-multipart
 
-# Note on PyTorch (torch, torchvision, torchaudio):
-# These will be provided by the official PyTorch base image in Dockerfile.
-# Do not list torch, torchvision, torchaudio here when using that Dockerfile.
+   # Note on PyTorch (torch, torchvision, torchaudio):
+   # These will be provided by the official PyTorch base image in Dockerfile.
