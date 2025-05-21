@@ -1,68 +1,59 @@
-# .github/workflows/docker-publish.yml
-   name: Docker Image CI for Distil-Whisper
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
 
-   on:
-     push:
-       branches: [ "main", "master" ]
-     pull_request:
-       branches: [ "main", "master" ]
-     workflow_dispatch:
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-   jobs:
-     build-and-push:
-       runs-on: ubuntu-latest
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@v10
+        with:
+          root-reserve-mb: 5120 # Increased from default/previous 512 to 5120 (5GB)
+          # temp-reserve-mb: 1024 # Optionally, increase reserve on /mnt too if needed later
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          # 'remove-swift' and 'remove-go' were invalid for v10, so they are removed.
+          # 'remove-docker-images' is a valid option if we need more aggressive Docker cleanup *before* LVM setup.
 
-       steps:
-         - name: Checkout repository
-           uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-         - name: Maximize build space
-           uses: easimon/maximize-build-space@v10
-           with:
-             root-reserve-mb: 512
-             swap-size-mb: 1024
-             remove-dotnet: 'true'
-             remove-android: 'true'
-             remove-haskell: 'true'
-             remove-codeql: 'true'
-             remove-swift: 'true'
-             remove-go: 'true'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-         - name: Set up QEMU
-           uses: docker/setup-qemu-action@v3
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-         - name: Set up Docker Buildx
-           uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/distil-whisper-runpod
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            latest=auto
 
-         - name: Log in to Docker Hub
-           if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-           uses: docker/login-action@v3
-           with:
-             username: ${{ secrets.DOCKERHUB_USERNAME }}
-             password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-         - name: Docker meta
-           id: meta
-           uses: docker/metadata-action@v5
-           with:
-             images: ${{ secrets.DOCKERHUB_USERNAME }}/distil-whisper-runpod
-             tags: |
-               type=ref,event=branch
-               type=ref,event=pr
-               type=semver,pattern={{version}}
-               type=semver,pattern={{major}}.{{minor}}
-               type=sha,prefix=sha-
-               type=raw,value=latest,enable={{is_default_branch}}
-             flavor: |
-               latest=auto
-
-         - name: Build and push Docker image
-           uses: docker/build-push-action@v5
-           with:
-             context: .
-             file: ./Dockerfile
-             push: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
-             tags: ${{ steps.meta.outputs.tags }}
-             labels: ${{ steps.meta.outputs.labels }}
-             cache-from: type=gha
-             cache-to: type=gha,mode=max
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=maxg
