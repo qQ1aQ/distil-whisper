@@ -1,66 +1,61 @@
-# 1. Use a smaller NVIDIA CUDA base image (CUDA 11.8, Ubuntu 22.04)
+# Use an official NVIDIA CUDA runtime image as a base
+# Make sure the CUDA version in the image matches your PyTorch build (cu118 for PyTorch 2.1.0+cu118)
 FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 
-# Set environment variables to prevent interactive prompts during apt-get
+# Set environment variables to non-interactive (prevents some prompts)
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHON_VERSION=3.10
+ENV TZ=Etc/UTC
 
-# Set the working directory
+# Install Python, pip, ffmpeg (for audio), and other common dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    python3.10-venv \
+    ffmpeg \
+    libsndfile1 \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make python3.10 the default python3 and pip point to python3.10's pip
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip
+
+# Set the working directory in the container
 WORKDIR /app
 
-# 2. Install Python, pip, git, and essential build tools
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python${PYTHON_VERSION} \
-    python${PYTHON_VERSION}-dev \
-    python${PYTHON_VERSION}-distutils \
-    python3-pip \
-    git \
-    build-essential \
-    software-properties-common \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# --- Pip Cache Purge and Clean PyTorch Installation ---
+# Purge pip cache first
+RUN pip cache purge
 
-# Make python${PYTHON_VERSION} the default python3 and python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1
-
-# 3. Upgrade pip
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    rm -rf ~/.cache/pip
-
-# 4. Install PyTorch 2.1.0 for CUDA 11.8
-# This version combination is important for flash-attn and model compatibility.
-RUN python3 -m pip install --no-cache-dir \
+# Install PyTorch, torchvision, and torchaudio first with --no-cache-dir and --force-reinstall
+# This explicitly targets the CUDA 11.8 compatible versions.
+RUN pip install \
+    --no-cache-dir \
+    --force-reinstall \
     torch==2.1.0 \
     torchvision==0.16.0 \
     torchaudio==2.1.0 \
-    --index-url https://download.pytorch.org/whl/cu118 && \
-    rm -rf ~/.cache/pip
+    --index-url https://download.pytorch.org/whl/cu118
 
-# 5. Install system dependencies for audio processing
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libsndfile1 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# 6. Copy requirements file
+# Copy the requirements file and install other Python dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 7. Install build dependencies for flash-attn, then install all Python packages from requirements.txt
-# `flash-attn==2.5.8` is also in requirements.txt, this explicit install ensures it's handled correctly.
-RUN python3 -m pip install --no-cache-dir --upgrade setuptools wheel packaging && \
-    python3 -m pip install --no-cache-dir flash-attn==2.5.8 && \
-    python3 -m pip install --no-cache-dir -r requirements.txt && \
-    rm -rf ~/.cache/pip
-
-# 8. Copy application script
+# Copy the rest of the application code
+# If your app.py is at the root of your GitHub repo:
 COPY app.py .
+# If you have other directories/files your app.py needs, copy them here too
+# e.g., COPY my_utils/ /app/my_utils/
 
-# 9. Expose the port uvicorn will run on
+# Expose the port the app runs on
 EXPOSE 8000
 
-# 10. Command to run when the container starts
-# --workers 1 is recommended for GPU-based PyTorch models to avoid issues
-# with multiprocessing unless your model/pipeline is specifically designed for it.
+# Command to run when the container starts
+# Use uvicorn to run the FastAPI application
+# --host 0.0.0.0 makes it accessible externally
+# --port 8000 matches the EXPOSE directive
+# --workers 1 is generally recommended for ML models to avoid GPU contention unless specifically designed for more
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
