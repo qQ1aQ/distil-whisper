@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     python3.10 \
     python3-pip \
     python3.10-venv \
+    build-essential \
+    software-properties-common \
     ffmpeg \
     libsndfile1 \
     git \
@@ -20,8 +22,9 @@ RUN apt-get update && apt-get install -y \
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 \
     && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
-# Upgrade pip
-RUN python3 -m pip install --upgrade pip
+# Upgrade pip, setuptools, and wheel, and install packaging (needed for flash-attn build)
+RUN python3 -m pip install --upgrade pip setuptools wheel \
+    && python3 -m pip install --no-cache-dir packaging
 
 # Set the working directory in the container
 WORKDIR /app
@@ -54,8 +57,4 @@ COPY app.py .
 EXPOSE 8000
 
 # Command to run when the container starts
-# Use uvicorn to run the FastAPI application
-# --host 0.0.0.0 makes it accessible externally
-# --port 8000 matches the EXPOSE directive
-# --workers 1 is generally recommended for ML models to avoid GPU contention unless specifically designed for more
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
