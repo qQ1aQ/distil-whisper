@@ -1,3 +1,5 @@
+# requirements.txt
+
 # Hugging Face and model-specific libraries
 transformers>=4.35.0
 accelerate
@@ -21,4 +23,5 @@ uvicorn[standard]
 python-multipart
 
 # Note on PyTorch (torch, torchvision, torchaudio):
-# These are installed separately in the Dockerfile.
+# These will be provided by the official PyTorch base image in Dockerfile.
+# Do not list torch, torchvision, torchaudio here when using that Dockerfile.
