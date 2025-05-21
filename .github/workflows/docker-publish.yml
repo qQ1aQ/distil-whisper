@@ -1,3 +1,12 @@
+name: Docker Image CI for Distil-Whisper
+
+on: # This section defines when the workflow runs
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual triggering
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -9,15 +18,14 @@ jobs:
       - name: Maximize build space
         uses: easimon/maximize-build-space@v10
         with:
-          root-reserve-mb: 5120 # Increased from default/previous 512 to 5120 (5GB)
-          # temp-reserve-mb: 1024 # Optionally, increase reserve on /mnt too if needed later
+          root-reserve-mb: 5120 # Increased to 5GB
+          # temp-reserve-mb: 1024
           swap-size-mb: 1024
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
-          # 'remove-swift' and 'remove-go' were invalid for v10, so they are removed.
-          # 'remove-docker-images' is a valid option if we need more aggressive Docker cleanup *before* LVM setup.
+          # 'remove-swift' and 'remove-go' were invalid for v10, removed.
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -56,4 +64,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=maxg
+          cache-to: type=gha,mode=max
