@@ -1,70 +1,24 @@
-name: Docker Image CI for Distil-Whisper
+# Dockerfile ...
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-devel
+#testtest comment
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
 
-on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir packaging
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-      - name: List files in workspace # <<< --- ADD THIS DEBUGGING STEP
-        run: ls -la
-        # This command will list all files and directories, including hidden ones,
-        # in the root of your checked-out repository within the GitHub Actions runner.
+COPY app.py .
+# If you have other directories/files your app.py needs, copy them here too
 
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 5120
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/distil-whisper-runpod
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-
-            type=raw,value=latest,enable={{is_default_branch}}
-          flavor: |
-            latest=auto
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile # This path is relative to the context
-          push: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+EXPOSE 8000
+CMD ["python3", "app.py"] 
+# Still diagnostic app.py
